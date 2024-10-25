@@ -1,5 +1,8 @@
 import sharp from "sharp"
-import { Post } from "../models/post.model";
+import { Post } from "../models/post.model.js";
+import cloudinary from "../utils/cloudinary.js";
+import {User} from "../models/user.model.js";
+import {Comment} from "../models/comment.model.js";
 
 export const addNewPost = async(req,res) => {
     try{
@@ -88,7 +91,7 @@ export const getUserPost = async (req,res) =>{
 }
 
 
-export const LikePost = async (req, res) => {
+export const likePost = async (req, res) => {
     try{
         const UserLiking = req.id;
         const postId = req.params.id;
@@ -168,7 +171,7 @@ export const getCommentsOfPost = async (req,res) => {
     }
 }
 
-export const deletPost = async (req, res) =>{
+export const deletePost = async (req, res) =>{
     try{
         const postId = req.params.id;
         const authorId = req.id;
@@ -178,8 +181,57 @@ export const deletPost = async (req, res) =>{
 
         //check if the logged in user is the owner of the post
         if(post.author.toString() != authorId) return res.status.json({message:'Unauthorized'});
+        
         //deletePost
         await Post.findByIdAndDelete(postId);
+
+        //remove the post id from the user's post
+        let user = await User.findId(authorId);
+        user.posts = user.posts.filter(id => id.toString() != postId);
+        await user.save();
+
+        //delete associated comments
+        await Comment.deleteMany({post: postId});
+
+        return res.status(200).json({
+            message: 'Post deleted',
+            success: true
+        });
+    }catch(error){
+        console.log(error);
+    }
+};
+
+
+export const bookmarkPost = async (req, res) => {
+    try{
+        const postId = req.params.id;
+        const authorId = req.id;
+        const post = await Post.findById(postId);
+        if(!post) return res.status(404).json({
+            message: 'Post not found',
+            success: false
+        });
+        const user = await User.findById(authorId);
+        if(user.bookmarks.includes(post._id)){
+            //if already bookmarked, remove from the list
+            await user.updateOne({$pull:{bookmarks:post._id}});
+            await user.save();
+            return res.status(200).json({
+                type: 'unsaved',
+                message: 'Post removed form bookmark',
+                success: true
+            })
+        }else{
+            //if not bookmarked, bookmark now
+            await user.updateOne({$addToSet:{bookmarks:post._id}});
+            await user.save();
+            return res.status(200).json({
+                type: 'saved',
+                message: 'Post added to bookmark',
+                success: true
+            })
+        }
     }catch(error){
         console.log(error);
     }
