@@ -3,6 +3,7 @@ import { Input } from "./ui/input.jsx";
 import { Button } from "./ui/button.jsx";
 import axios from "axios";
 import { toast } from "sonner";
+import { Link, useNavigate } from "react-router-dom";
 
 const Signup = () => {
   const [input, setInput] = useState({
@@ -10,6 +11,7 @@ const Signup = () => {
     email: "",
     password: "",
   });
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const changeEventHandler = (e) => {
     setInput({ ...input, [e.target.name]: e.target.value });
@@ -30,6 +32,7 @@ const Signup = () => {
         }
       );
       if (res.data.success) {
+        navigate("/login");
         toast.success(res.data.message);
         setInput({
           username: "",
@@ -85,6 +88,12 @@ const Signup = () => {
           />
         </div>
         <Button type="submit">Signup</Button>
+        <span className="text-center">
+          Already have an account?{" "}
+          <Link to="/login" className="text-blue-600">
+            Login
+          </Link>
+        </span>
       </form>
     </div>
   );
